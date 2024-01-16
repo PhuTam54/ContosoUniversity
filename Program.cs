@@ -16,8 +16,16 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-
-    DbInitializer.Initialize(services);
+    try
+    {
+        var context = services.GetRequiredService<ContosoUniversityContext>();
+        DbInitializer.Initialize(context);
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while seeding the database.");
+    }
 }
 
 // Configure the HTTP request pipeline.

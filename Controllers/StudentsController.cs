@@ -20,22 +20,63 @@ namespace ContosoUniversity.Controllers
         }
 
         // GET: Students
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(
+    string sortOrder,
+    string currentFilter,
+    string searchString,
+    int? pageNumber)
         {
-            return _context.Student != null ?
-                        View(await _context.Student.ToListAsync()) :
-                        Problem("Entity set 'ContosoUniversityContext.Student'  is null.");
+            ViewData["CurrentSort"] = sortOrder;
+            ViewData["NameSortParm"] = String.IsNullOrEmpty(sortOrder) ? "name_desc" : "";
+            ViewData["DateSortParm"] = sortOrder == "Date" ? "date_desc" : "Date";
+
+            if (searchString != null)
+            {
+                pageNumber = 1;
+            }
+            else
+            {
+                searchString = currentFilter;
+            }
+
+            ViewData["CurrentFilter"] = searchString;
+
+            var students = from s in _context.Students
+                           select s;
+            if (!String.IsNullOrEmpty(searchString))
+            {
+                students = students.Where(s => s.LastName.Contains(searchString)
+                                       || s.FirstMidName.Contains(searchString));
+            }
+            switch (sortOrder)
+            {
+                case "name_desc":
+                    students = students.OrderByDescending(s => s.LastName);
+                    break;
+                case "Date":
+                    students = students.OrderBy(s => s.EnrollmentDate);
+                    break;
+                case "date_desc":
+                    students = students.OrderByDescending(s => s.EnrollmentDate);
+                    break;
+                default:
+                    students = students.OrderBy(s => s.LastName);
+                    break;
+            }
+
+            int pageSize = 3;
+            return View(await PaginatedList<Student>.CreateAsync(students.AsNoTracking(), pageNumber ?? 1, pageSize));
         }
 
         // GET: Students/Details/5
         public async Task<IActionResult> Details(int? id)
         {
-            if (id == null || _context.Student == null)
+            if (id == null || _context.Students == null)
             {
                 return NotFound();
             }
 
-            var student = await _context.Student
+            var student = await _context.Students
                 .Include(s => s.Enrollments)
                 .ThenInclude(e => e.Course)
                 .AsNoTracking()
@@ -85,12 +126,12 @@ namespace ContosoUniversity.Controllers
         // GET: Students/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null || _context.Student == null)
+            if (id == null || _context.Students == null)
             {
                 return NotFound();
             }
 
-            var student = await _context.Student.FindAsync(id);
+            var student = await _context.Students.FindAsync(id);
             if (student == null)
             {
                 return NotFound();
@@ -109,7 +150,7 @@ namespace ContosoUniversity.Controllers
             {
                 return NotFound();
             }
-            var studentToUpdate = await _context.Student.FirstOrDefaultAsync(s => s.ID == id);
+            var studentToUpdate = await _context.Students.FirstOrDefaultAsync(s => s.ID == id);
             if (await TryUpdateModelAsync<Student>(
                 studentToUpdate,
                 "",
@@ -139,7 +180,7 @@ namespace ContosoUniversity.Controllers
                 return NotFound();
             }
 
-            var student = await _context.Student
+            var student = await _context.Students
                 .AsNoTracking()
                 .FirstOrDefaultAsync(m => m.ID == id);
             if (student == null)
@@ -162,7 +203,7 @@ namespace ContosoUniversity.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var student = await _context.Student.FindAsync(id);
+            var student = await _context.Students.FindAsync(id);
             if (student == null)
             {
                 return RedirectToAction(nameof(Index));
@@ -170,7 +211,7 @@ namespace ContosoUniversity.Controllers
 
             try
             {
-                _context.Student.Remove(student);
+                _context.Students.Remove(student);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
@@ -183,7 +224,7 @@ namespace ContosoUniversity.Controllers
 
         private bool StudentExists(int id)
         {
-            return (_context.Student?.Any(e => e.ID == id)).GetValueOrDefault();
+            return (_context.Students?.Any(e => e.ID == id)).GetValueOrDefault();
         }
     }
 }

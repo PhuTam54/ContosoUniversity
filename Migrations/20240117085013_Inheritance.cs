@@ -10,38 +10,66 @@ namespace ContosoUniversity.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_Enrollment_Student_StudentID",
-                table: "Enrollment");
+            migrationBuilder.DropColumn(
+                name: "FirstName",
+                table: "Student");
 
-            migrationBuilder.DropIndex(name: "IX_Enrollment_StudentID", table: "Enrollment");
+            migrationBuilder.DropColumn(
+                name: "LastName",
+                table: "Student");
 
-            migrationBuilder.RenameTable(name: "Instructor", newName: "Person");
-            migrationBuilder.AddColumn<DateTime>(name: "EnrollmentDate", table: "Person", nullable: true);
-            migrationBuilder.AddColumn<string>(name: "Discriminator", table: "Person", nullable: false, maxLength: 128, defaultValue: "Instructor");
-            migrationBuilder.AlterColumn<DateTime>(name: "HireDate", table: "Person", nullable: true);
-            migrationBuilder.AddColumn<int>(name: "OldId", table: "Person", nullable: true);
+            migrationBuilder.DropColumn(
+                name: "FirstName",
+                table: "Instructor");
 
-            // Copy existing Student data into new Person table.
-            migrationBuilder.Sql("INSERT INTO dbo.Person (LastName, FirstName, HireDate, EnrollmentDate, Discriminator, OldId) SELECT LastName, FirstName, null AS HireDate, EnrollmentDate, 'Student' AS Discriminator, ID AS OldId FROM dbo.Student");
-            // Fix up existing relationships to match new PK's.
-            migrationBuilder.Sql("UPDATE dbo.Enrollment SET StudentId = (SELECT ID FROM dbo.Person WHERE OldId = Enrollment.StudentId AND Discriminator = 'Student')");
+            migrationBuilder.DropColumn(
+                name: "LastName",
+                table: "Instructor");
 
-            // Remove temporary key
-            migrationBuilder.DropColumn(name: "OldID", table: "Person");
+            migrationBuilder.AlterColumn<int>(
+                name: "ID",
+                table: "Student",
+                type: "int",
+                nullable: false,
+                oldClrType: typeof(int),
+                oldType: "int")
+                .OldAnnotation("SqlServer:Identity", "1, 1");
 
-            migrationBuilder.DropTable(
-                name: "Student");
+            migrationBuilder.AlterColumn<int>(
+                name: "ID",
+                table: "Instructor",
+                type: "int",
+                nullable: false,
+                oldClrType: typeof(int),
+                oldType: "int")
+                .OldAnnotation("SqlServer:Identity", "1, 1");
 
-            migrationBuilder.CreateIndex(
-                 name: "IX_Enrollment_StudentID",
-                 table: "Enrollment",
-                 column: "StudentID");
+            migrationBuilder.CreateTable(
+                name: "Person",
+                columns: table => new
+                {
+                    ID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    LastName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    FirstName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Person", x => x.ID);
+                });
 
             migrationBuilder.AddForeignKey(
-                name: "FK_Enrollment_Person_StudentID",
-                table: "Enrollment",
-                column: "StudentID",
+                name: "FK_Instructor_Person_ID",
+                table: "Instructor",
+                column: "ID",
+                principalTable: "Person",
+                principalColumn: "ID",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_Student_Person_ID",
+                table: "Student",
+                column: "ID",
                 principalTable: "Person",
                 principalColumn: "ID",
                 onDelete: ReferentialAction.Cascade);
